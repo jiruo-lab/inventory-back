@@ -1,10 +1,11 @@
-//import the installed module of express 
-const express = require("express");
-const path = require("path");
-const cors = require("cors");
-const mongoose = require("mongoose");
+// import the installed modules
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+import cors from "cors";
+import mongoose from "mongoose";
 
-const server = express();
+const app = express();
 const port = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/Inventory-Management";
 
@@ -17,9 +18,12 @@ mongoose.connect(MONGO_URI)
         process.exit(1);
     });
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const publicPath = path.join(__dirname, "..", "front");
-server.use(express.static(publicPath));
-server.get("/", (req, res) => {
+app.use(express.static(publicPath));
+app.get("/", (req, res) => {
     res.sendFile(path.join(publicPath, "index.html"));
 });
 
@@ -85,17 +89,17 @@ const Supplier = mongoose.model("Supplier", supplierSchema);
 
 
 
-// Middewares
-server.use(cors());
-server.use(express.json());
-server.use(express.urlencoded({extended: true}));
+// Middlewares
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 
 // Routes
-server.get("/home", (req, res) => {
+app.get("/home", (req, res) => {
     res.send("Hello from the home endpoint!");
 });
 // Error handling for undefined routes
-server.get("/error", (req, res) => {
+app.get("/error", (req, res) => {
     res.status(404).send({
         code: 404,
         message: "Sorry the page cannot be found."
@@ -103,7 +107,7 @@ server.get("/error", (req, res) => {
 })
 
 // Add new inventory item
-server.post("/inventory/add", async (req, res) => {
+app.post("/inventory/add", async (req, res) => {
     try {
         const duplicate = await InventoryItem.findOne({
             productName: req.body.productName,
@@ -148,7 +152,7 @@ server.post("/inventory/add", async (req, res) => {
     }
 })
 // Get all inventory items
-server.get("/inventory/get-all-item", async (req, res) => {
+app.get("/inventory/get-all-item", async (req, res) => {
     try {
         const items = await InventoryItem.find({});
         res.status(200).send({
@@ -168,7 +172,7 @@ server.get("/inventory/get-all-item", async (req, res) => {
 
 
 // Get inventory item by itemName
-server.get("/inventory/get-item", (req, res) => {
+app.get("/inventory/get-item", (req, res) => {
     const itemName = req.query.itemName;
 
     if(!itemName){
@@ -200,7 +204,7 @@ server.get("/inventory/get-item", (req, res) => {
 })
 
 // Unified search endpoint for the front-end and results page
-server.get("/api/search", async (req, res) => {
+app.get("/api/search", async (req, res) => {
     const schema = (req.query.schema || "all").toLowerCase();
     const searchText = (req.query.q || "").trim();
     const allSchemas = req.query.all === "1" || schema === "all";
@@ -259,7 +263,7 @@ server.get("/api/search", async (req, res) => {
 });
 
 // Delete inventory item by itemId
-server.delete("/inventory/delete/:itemId", async (req, res) => {
+app.delete("/inventory/delete/:itemId", async (req, res) => {
     if(!mongoose.isValidObjectId(req.params.itemId)){
         res.status(400).send({ code: 400, message: "Invalid itemId provided." });
         return;
@@ -282,7 +286,7 @@ server.delete("/inventory/delete/:itemId", async (req, res) => {
 })
 
 // Update stocks for inventory item
-server.patch("/inventory/update-stocks/:itemId", (req, res) => {
+app.patch("/inventory/update-stocks/:itemId", (req, res) => {
     if(!mongoose.isValidObjectId(req.params.itemId)){
         res.status(400).send({ code: 400, message: "Invalid itemId provided." });
         return;
@@ -311,7 +315,7 @@ server.patch("/inventory/update-stocks/:itemId", (req, res) => {
 });
 
 // Edit inventory item by itemId
-server.patch("/inventory/edit/:itemId", async (req, res) => {
+app.patch("/inventory/edit/:itemId", async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.itemId)) {
         return res.status(400).send({
             code: 400,
@@ -362,7 +366,7 @@ server.patch("/inventory/edit/:itemId", async (req, res) => {
     }
 })
 // Delete all inventory items
-server.delete("/inventory/delete-all", async (req, res) => {
+app.delete("/inventory/delete-all", async (req, res) => {
     try {
         const result = await InventoryItem.deleteMany({});
         res.status(200).send({
@@ -384,7 +388,7 @@ server.delete("/inventory/delete-all", async (req, res) => {
 
 
 // Add new item category
-server.post("/inventory/category", async (req, res) => {
+app.post("/inventory/category", async (req, res) => {
     try {
         const existingCategory = await ItemCategory.findOne({ categoryName: req.body.categoryName });
         if (existingCategory) {
@@ -416,7 +420,7 @@ server.post("/inventory/category", async (req, res) => {
 })
 
 // List inventory items by category name
-server.get("/inventory/list-item-category", async (req, res) => {
+app.get("/inventory/list-item-category", async (req, res) => {
     const categoryName = req.query.categoryName;
 
     if (!categoryName) {
@@ -448,7 +452,7 @@ server.get("/inventory/list-item-category", async (req, res) => {
     }
 })
 // List of all categories
-server.get("/inventory/all-category", async (req, res) => {
+app.get("/inventory/all-category", async (req, res) => {
     try {
         const categories = await ItemCategory.find({});
         res.status(200).send({
@@ -470,7 +474,7 @@ server.get("/inventory/all-category", async (req, res) => {
 //Supplier routes
 
 // Add new supplier
-server.post("/inventory/supplier", async (req, res) => {
+app.post("/inventory/supplier", async (req, res) => {
     if (!req.body || !req.body.supplier || !req.body.contact || !req.body.address) {
         return res.status(400).send({
             code: 400,
@@ -509,7 +513,7 @@ server.post("/inventory/supplier", async (req, res) => {
     }
 })
 // List of supplier name
-server.get("/inventory/list_of_supplier", async (req, res) => {
+app.get("/inventory/list_of_supplier", async (req, res) => {
     try {
         const suppliers = await Supplier.find({});
         res.status(200).send({
@@ -528,7 +532,7 @@ server.get("/inventory/list_of_supplier", async (req, res) => {
 })
 
 // List of inventory items by supplier name
-server.get("/inventory/items_from_supplier", async (req, res) => {
+app.get("/inventory/items_from_supplier", async (req, res) => {
     let supplierName = req.query.supplierName;
 
     if (!supplierName) {
@@ -566,13 +570,13 @@ server.get("/inventory/items_from_supplier", async (req, res) => {
 })
 
 
-server.use((req, res) => {
+app.use((req, res) => {
     res.status(404).send({ code: 404, message: "Not found. Check the requested route." });
 });
 
-server.use((err, req, res, next) => {
+app.use((err, req, res, next) => {
     console.error("Unexpected server error:", err);
     res.status(500).send({ code: 500, message: "Internal server error.", error: err.message });
 });
 
-server.listen(port, () => console.log(`Server is now running at port ${port}.`))
+export default app;
