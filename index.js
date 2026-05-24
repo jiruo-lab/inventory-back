@@ -11,12 +11,9 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/Inventory-
 
 // Trigger connection to mongoDB thru mongoose
 // mongoose.connect("mongodb://localhost:27017/");
-mongoose.connect(MONGO_URI)
+mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("MongoDB connection is successful."))
-    .catch((err) => {
-        console.error("Failed to connect to MongoDB:", err);
-        process.exit(1);
-    });
+    .catch(err => console.log(err));
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
