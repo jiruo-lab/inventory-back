@@ -1,7 +1,5 @@
 ﻿import 'dotenv/config';
 import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
 import serverless from "serverless-http";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -22,12 +20,6 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/Inventory-
 mongoose.connect(MONGO_URI)
     .then(() => console.log("MongoDB connection is successful."))
     .catch(err => console.error("MongoDB connection error:", err));
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const publicPath = path.resolve(__dirname, "../../front");
-app.use(express.static(publicPath));
 
 app.get("/", (req, res) => {
     res.json({ message: "Welcome to the Inventory Management System API!" });
