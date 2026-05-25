@@ -1,5 +1,4 @@
-// import the installed modules
-import express from "express";
+﻿import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import serverless from "serverless-http";
@@ -7,38 +6,31 @@ import cors from "cors";
 import mongoose from "mongoose";
 
 const app = express();
+
+// Middlewares
+app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const port = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/Inventory-Management";
 
-// Trigger connection to mongoDB thru mongoose
-// mongoose.connect("mongodb://localhost:27017/");
-mongoose.connect(process.env.MONGO_URI)
+// Connect to MongoDB
+mongoose.connect(MONGO_URI)
     .then(() => console.log("MongoDB connection is successful."))
-    .catch(err => console.log(err));
+    .catch(err => console.error("MongoDB connection error:", err));
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const publicPath = path.join(__dirname, "..", "front");
 app.use(express.static(publicPath));
+
 app.get("/", (req, res) => {
     res.json({ message: "Welcome to the Inventory Management System API!" });
 });
 
-export default serverless(app);
-export default app;
-
-const db = mongoose.connection;
-
-// Check if connection has error
-db.on("error", (err) => console.error("MongoDB connection error:", err));
-
-// Check if connection is okay
-db.once("open", () => console.log("MongoDB connection opened."));
-
-//Schema -> blueprint
-
+// Mongoose Schemas and Models
 const inventorySchema = new mongoose.Schema({
     name: String,
     productName: String,
@@ -61,9 +53,8 @@ const inventorySchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
-})
+});
 
-//Model
 const InventoryItem = mongoose.model("InventoryItem", inventorySchema);
 
 const itemCategorySchema = new mongoose.Schema({
@@ -73,7 +64,7 @@ const itemCategorySchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
-})
+});
 
 const ItemCategory = mongoose.model("ItemCategory", itemCategorySchema);
 
@@ -89,26 +80,18 @@ const supplierSchema = new mongoose.Schema({
 
 const Supplier = mongoose.model("Supplier", supplierSchema);
 
-
-
-// Middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({extended: true}));
-
 // Routes
 app.get("/home", (req, res) => {
     res.send("Hello from the home endpoint!");
 });
-// Error handling for undefined routes
+
 app.get("/error", (req, res) => {
     res.status(404).send({
         code: 404,
         message: "Sorry the page cannot be found."
-    })
-})
+    });
+});
 
-// Add new inventory item
 app.post("/inventory/add", async (req, res) => {
     try {
         const duplicate = await InventoryItem.findOne({
@@ -152,8 +135,8 @@ app.post("/inventory/add", async (req, res) => {
             error: err.message
         });
     }
-})
-// Get all inventory items
+});
+
 app.get("/inventory/get-all-item", async (req, res) => {
     try {
         const items = await InventoryItem.find({});
@@ -170,14 +153,12 @@ app.get("/inventory/get-all-item", async (req, res) => {
             error: err.message
         });
     }
-})
+});
 
-
-// Get inventory item by itemName
 app.get("/inventory/get-item", (req, res) => {
     const itemName = req.query.itemName;
 
-    if(!itemName){
+    if (!itemName) {
         res.send("Item name is required.");
         return;
     }
@@ -185,10 +166,10 @@ app.get("/inventory/get-item", (req, res) => {
     const escapedItemName = itemName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const nameRegex = new RegExp(`^${escapedItemName}$`, "i");
 
-    InventoryItem.findOne({name: nameRegex}).then((item) => {
-        if(item == null){
+    InventoryItem.findOne({ name: nameRegex }).then((item) => {
+        if (item == null) {
             res.send("Inventory item not found. Cannot retrieve!");
-        }else{
+        } else {
             res.status(200).send({
                 code: 200,
                 message: "Inventory item retrieved successfully!",
@@ -202,10 +183,9 @@ app.get("/inventory/get-item", (req, res) => {
             message: "Error retrieving inventory item.",
             error: err.message
         });
-    })
-})
+    });
+});
 
-// Unified search endpoint for the front-end and results page
 app.get("/api/search", async (req, res) => {
     const schema = (req.query.schema || "all").toLowerCase();
     const searchText = (req.query.q || "").trim();
@@ -264,9 +244,8 @@ app.get("/api/search", async (req, res) => {
     }
 });
 
-// Delete inventory item by itemId
 app.delete("/inventory/delete/:itemId", async (req, res) => {
-    if(!mongoose.isValidObjectId(req.params.itemId)){
+    if (!mongoose.isValidObjectId(req.params.itemId)) {
         res.status(400).send({ code: 400, message: "Invalid itemId provided." });
         return;
     }
@@ -285,17 +264,16 @@ app.delete("/inventory/delete/:itemId", async (req, res) => {
         console.error("Error deleting inventory item:", err);
         res.status(500).send({ code: 500, message: "There is an error deleting the inventory item.", error: err.message });
     }
-})
+});
 
-// Update stocks for inventory item
 app.patch("/inventory/update-stocks/:itemId", (req, res) => {
-    if(!mongoose.isValidObjectId(req.params.itemId)){
+    if (!mongoose.isValidObjectId(req.params.itemId)) {
         res.status(400).send({ code: 400, message: "Invalid itemId provided." });
         return;
     }
 
     const stocks = Number(req.body.stocks);
-    if(Number.isNaN(stocks)){
+    if (Number.isNaN(stocks)) {
         res.status(400).send({ code: 400, message: "A valid stocks value is required." });
         return;
     }
@@ -305,9 +283,9 @@ app.patch("/inventory/update-stocks/:itemId", (req, res) => {
         { stocks },
         { new: true }
     ).then((updatedItem) => {
-        if(!updatedItem){
+        if (!updatedItem) {
             res.status(404).send({ code: 404, message: "Inventory item not found. Cannot update stocks!" });
-        }else{
+        } else {
             res.status(200).send({ code: 200, message: "Item stocks updated successfully!", data: updatedItem });
         }
     }).catch((err) => {
@@ -316,7 +294,6 @@ app.patch("/inventory/update-stocks/:itemId", (req, res) => {
     });
 });
 
-// Edit inventory item by itemId
 app.patch("/inventory/edit/:itemId", async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.itemId)) {
         return res.status(400).send({
@@ -366,8 +343,8 @@ app.patch("/inventory/edit/:itemId", async (req, res) => {
             error: err.message
         });
     }
-})
-// Delete all inventory items
+});
+
 app.delete("/inventory/delete-all", async (req, res) => {
     try {
         const result = await InventoryItem.deleteMany({});
@@ -384,12 +361,8 @@ app.delete("/inventory/delete-all", async (req, res) => {
             error: err.message
         });
     }
-})
+});
 
-
-
-
-// Add new item category
 app.post("/inventory/category", async (req, res) => {
     try {
         const existingCategory = await ItemCategory.findOne({ categoryName: req.body.categoryName });
@@ -419,9 +392,8 @@ app.post("/inventory/category", async (req, res) => {
             error: err.message
         });
     }
-})
+});
 
-// List inventory items by category name
 app.get("/inventory/list-item-category", async (req, res) => {
     const categoryName = req.query.categoryName;
 
@@ -452,8 +424,8 @@ app.get("/inventory/list-item-category", async (req, res) => {
         console.error("Error listing items by category:", err);
         res.status(500).send({ code: 500, message: "Error retrieving inventory items for the category.", error: err.message });
     }
-})
-// List of all categories
+});
+
 app.get("/inventory/all-category", async (req, res) => {
     try {
         const categories = await ItemCategory.find({});
@@ -470,12 +442,8 @@ app.get("/inventory/all-category", async (req, res) => {
             error: err.message
         });
     }
-})
+});
 
-
-//Supplier routes
-
-// Add new supplier
 app.post("/inventory/supplier", async (req, res) => {
     if (!req.body || !req.body.supplier || !req.body.contact || !req.body.address) {
         return res.status(400).send({
@@ -513,8 +481,8 @@ app.post("/inventory/supplier", async (req, res) => {
             error: err.message
         });
     }
-})
-// List of supplier name
+});
+
 app.get("/inventory/list_of_supplier", async (req, res) => {
     try {
         const suppliers = await Supplier.find({});
@@ -531,9 +499,8 @@ app.get("/inventory/list_of_supplier", async (req, res) => {
             error: err.message
         });
     }
-})
+});
 
-// List of inventory items by supplier name
 app.get("/inventory/items_from_supplier", async (req, res) => {
     let supplierName = req.query.supplierName;
 
@@ -569,8 +536,7 @@ app.get("/inventory/items_from_supplier", async (req, res) => {
             error: err.message
         });
     }
-})
-
+});
 
 app.use((req, res) => {
     res.status(404).send({ code: 404, message: "Not found. Check the requested route." });
@@ -581,4 +547,8 @@ app.use((err, req, res, next) => {
     res.status(500).send({ code: 500, message: "Internal server error.", error: err.message });
 });
 
-export default app;
+if (!process.env.VERCEL) {
+    app.listen(port, () => console.log(`Server running on port ${port}.`));
+}
+
+export default serverless(app);
