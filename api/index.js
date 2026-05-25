@@ -9,7 +9,9 @@ import mongoose from "mongoose";
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+    origin: "https://jiruo-lab.github.io/Inventory-frontend/"
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -24,7 +26,7 @@ mongoose.connect(MONGO_URI)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const publicPath = path.join(__dirname, "..", "front");
+const publicPath = path.resolve(__dirname, "../../front");
 app.use(express.static(publicPath));
 
 app.get("/", (req, res) => {
@@ -82,17 +84,6 @@ const supplierSchema = new mongoose.Schema({
 const Supplier = mongoose.model("Supplier", supplierSchema);
 
 // Routes
-app.get("/home", (req, res) => {
-    res.send("Hello from the home endpoint!");
-});
-
-app.get("/error", (req, res) => {
-    res.status(404).send({
-        code: 404,
-        message: "Sorry the page cannot be found."
-    });
-});
-
 app.post("/inventory/add", async (req, res) => {
     try {
         const duplicate = await InventoryItem.findOne({
@@ -548,7 +539,8 @@ app.use((err, req, res, next) => {
     res.status(500).send({ code: 500, message: "Internal server error.", error: err.message });
 });
 
-if (!process.env.VERCEL) {
+const isServerless = Boolean(process.env.VERCEL || process.env.FUNCTIONS_WORKER_RUNTIME || process.env.AWS_LAMBDA_FUNCTION_NAME);
+if (!isServerless) {
     app.listen(port, () => console.log(`Server running on port ${port}.`));
 }
 
