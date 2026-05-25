@@ -8,7 +8,7 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-    origin: "https://jiruo-lab.github.io/Inventory-frontend/"
+    origin: ["https://jiruo-lab.github.io", "https://inventory-back-mo0ev0vvw-jiruo-labs-projects.vercel.app"]
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
