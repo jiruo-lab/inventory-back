@@ -7,9 +7,7 @@ import mongoose from "mongoose";
 const app = express();
 
 // Middlewares
-app.use(cors({
-    origin: ["https://jiruo-lab.github.io", "https://inventory-back-mo0ev0vvw-jiruo-labs-projects.vercel.app"]
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -177,6 +175,7 @@ app.get("/api/search", async (req, res) => {
     const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const searchRegex = searchText ? new RegExp(escapedSearch, "i") : /.*/;
     const response = {};
+    const resultLimit = searchText ? 200 : 50;
 
     try {
         if (allSchemas || schema === "inventory") {
@@ -191,7 +190,7 @@ app.get("/api/search", async (req, res) => {
                         { supplier: searchRegex }
                     ]
                 } : {}
-            ).sort({ category: 1, name: 1 }).lean();
+            ).sort({ category: 1, name: 1 }).limit(resultLimit).lean();
         }
 
         if (allSchemas || schema === "category") {
@@ -202,7 +201,7 @@ app.get("/api/search", async (req, res) => {
                         { description: searchRegex }
                     ]
                 } : {}
-            ).sort({ categoryName: 1 }).lean();
+            ).sort({ categoryName: 1 }).limit(resultLimit).lean();
         }
 
         if (allSchemas || schema === "supplier") {
@@ -214,7 +213,7 @@ app.get("/api/search", async (req, res) => {
                         { address: searchRegex }
                     ]
                 } : {}
-            ).sort({ supplier: 1 }).lean();
+            ).sort({ supplier: 1 }).limit(resultLimit).lean();
         }
 
         res.status(200).send({ code: 200, items: response });
