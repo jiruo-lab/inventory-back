@@ -190,7 +190,7 @@ app.get("/api/search", async (req, res) => {
                         { supplier: searchRegex }
                     ]
                 } : {}
-            ).sort({ category: 1, name: 1 }).limit(resultLimit).lean()
+            ).sort({ category: 1, name: 1 }).limit(resultLimit).select('name productName sku category brand supplier quantity price stocks reorderLevel').lean()
             : null;
 
         const categoryQuery = allSchemas || schema === "category"
@@ -201,7 +201,7 @@ app.get("/api/search", async (req, res) => {
                         { description: searchRegex }
                     ]
                 } : {}
-            ).sort({ categoryName: 1 }).limit(resultLimit).lean()
+            ).sort({ categoryName: 1 }).limit(resultLimit).select('categoryName description dateAdded').lean()
             : null;
 
         const supplierQuery = allSchemas || schema === "supplier"
@@ -213,7 +213,7 @@ app.get("/api/search", async (req, res) => {
                         { address: searchRegex }
                     ]
                 } : {}
-            ).sort({ supplier: 1 }).limit(resultLimit).lean()
+            ).sort({ supplier: 1 }).limit(resultLimit).select('supplier contact address dateAdded').lean()
             : null;
 
         const [inventory, category, supplier] = await Promise.all([
