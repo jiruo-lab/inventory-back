@@ -178,8 +178,8 @@ app.get("/api/search", async (req, res) => {
     const resultLimit = searchText ? 200 : 50;
 
     try {
-        if (allSchemas || schema === "inventory") {
-            response.inventory = await InventoryItem.find(
+        const inventoryQuery = allSchemas || schema === "inventory"
+            ? InventoryItem.find(
                 searchText ? {
                     $or: [
                         { name: searchRegex },
@@ -190,22 +190,22 @@ app.get("/api/search", async (req, res) => {
                         { supplier: searchRegex }
                     ]
                 } : {}
-            ).sort({ category: 1, name: 1 }).limit(resultLimit).lean();
-        }
+            ).sort({ category: 1, name: 1 }).limit(resultLimit).lean()
+            : null;
 
-        if (allSchemas || schema === "category") {
-            response.category = await ItemCategory.find(
+        const categoryQuery = allSchemas || schema === "category"
+            ? ItemCategory.find(
                 searchText ? {
                     $or: [
                         { categoryName: searchRegex },
                         { description: searchRegex }
                     ]
                 } : {}
-            ).sort({ categoryName: 1 }).limit(resultLimit).lean();
-        }
+            ).sort({ categoryName: 1 }).limit(resultLimit).lean()
+            : null;
 
-        if (allSchemas || schema === "supplier") {
-            response.supplier = await Supplier.find(
+        const supplierQuery = allSchemas || schema === "supplier"
+            ? Supplier.find(
                 searchText ? {
                     $or: [
                         { supplier: searchRegex },
@@ -213,8 +213,18 @@ app.get("/api/search", async (req, res) => {
                         { address: searchRegex }
                     ]
                 } : {}
-            ).sort({ supplier: 1 }).limit(resultLimit).lean();
-        }
+            ).sort({ supplier: 1 }).limit(resultLimit).lean()
+            : null;
+
+        const [inventory, category, supplier] = await Promise.all([
+            inventoryQuery,
+            categoryQuery,
+            supplierQuery
+        ]);
+
+        if (inventory !== null) response.inventory = inventory;
+        if (category !== null) response.category = category;
+        if (supplier !== null) response.supplier = supplier;
 
         res.status(200).send({ code: 200, items: response });
     } catch (error) {
