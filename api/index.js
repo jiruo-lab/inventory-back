@@ -1,6 +1,5 @@
-﻿import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
+﻿import 'dotenv/config';
+import express from "express";
 import serverless from "serverless-http";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -19,12 +18,6 @@ const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/Inventory-
 mongoose.connect(MONGO_URI)
     .then(() => console.log("MongoDB connection is successful."))
     .catch(err => console.error("MongoDB connection error:", err));
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const publicPath = path.join(__dirname, "..", "front");
-app.use(express.static(publicPath));
 
 app.get("/", (req, res) => {
     res.json({ message: "Welcome to the Inventory Management System API!" });
@@ -81,17 +74,6 @@ const supplierSchema = new mongoose.Schema({
 const Supplier = mongoose.model("Supplier", supplierSchema);
 
 // Routes
-app.get("/home", (req, res) => {
-    res.send("Hello from the home endpoint!");
-});
-
-app.get("/error", (req, res) => {
-    res.status(404).send({
-        code: 404,
-        message: "Sorry the page cannot be found."
-    });
-});
-
 app.post("/inventory/add", async (req, res) => {
     try {
         const duplicate = await InventoryItem.findOne({
@@ -193,10 +175,11 @@ app.get("/api/search", async (req, res) => {
     const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const searchRegex = searchText ? new RegExp(escapedSearch, "i") : /.*/;
     const response = {};
+    const resultLimit = searchText ? 200 : 50;
 
     try {
-        if (allSchemas || schema === "inventory") {
-            response.inventory = await InventoryItem.find(
+        const inventoryQuery = allSchemas || schema === "inventory"
+            ? InventoryItem.find(
                 searchText ? {
                     $or: [
                         { name: searchRegex },
@@ -207,22 +190,22 @@ app.get("/api/search", async (req, res) => {
                         { supplier: searchRegex }
                     ]
                 } : {}
-            ).sort({ category: 1, name: 1 }).lean();
-        }
+            ).sort({ category: 1, name: 1 }).limit(resultLimit).select('name productName sku category brand supplier quantity price stocks reorderLevel').lean()
+            : null;
 
-        if (allSchemas || schema === "category") {
-            response.category = await ItemCategory.find(
+        const categoryQuery = allSchemas || schema === "category"
+            ? ItemCategory.find(
                 searchText ? {
                     $or: [
                         { categoryName: searchRegex },
                         { description: searchRegex }
                     ]
                 } : {}
-            ).sort({ categoryName: 1 }).lean();
-        }
+            ).sort({ categoryName: 1 }).limit(resultLimit).select('categoryName description dateAdded').lean()
+            : null;
 
-        if (allSchemas || schema === "supplier") {
-            response.supplier = await Supplier.find(
+        const supplierQuery = allSchemas || schema === "supplier"
+            ? Supplier.find(
                 searchText ? {
                     $or: [
                         { supplier: searchRegex },
@@ -230,8 +213,18 @@ app.get("/api/search", async (req, res) => {
                         { address: searchRegex }
                     ]
                 } : {}
-            ).sort({ supplier: 1 }).lean();
-        }
+            ).sort({ supplier: 1 }).limit(resultLimit).select('supplier contact address dateAdded').lean()
+            : null;
+
+        const [inventory, category, supplier] = await Promise.all([
+            inventoryQuery,
+            categoryQuery,
+            supplierQuery
+        ]);
+
+        if (inventory !== null) response.inventory = inventory;
+        if (category !== null) response.category = category;
+        if (supplier !== null) response.supplier = supplier;
 
         res.status(200).send({ code: 200, items: response });
     } catch (error) {
@@ -547,7 +540,8 @@ app.use((err, req, res, next) => {
     res.status(500).send({ code: 500, message: "Internal server error.", error: err.message });
 });
 
-if (!process.env.VERCEL) {
+const isServerless = Boolean(process.env.VERCEL || process.env.FUNCTIONS_WORKER_RUNTIME || process.env.AWS_LAMBDA_FUNCTION_NAME);
+if (!isServerless) {
     app.listen(port, () => console.log(`Server running on port ${port}.`));
 }
 

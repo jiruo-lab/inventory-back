@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "your-app-name",
   "type": "module",
   "version": "1.0.0",
@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^4.18.2",
     "mongoose": "^8.5.0",
     "serverless-http": "^3.0.0"
