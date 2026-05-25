@@ -2,10 +2,12 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import serverless from "serverless-http";
 import cors from "cors";
 import mongoose from "mongoose";
 
 const app = express();
+app.use(express.json());
 const port = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/Inventory-Management";
 
@@ -21,8 +23,11 @@ const __dirname = path.dirname(__filename);
 const publicPath = path.join(__dirname, "..", "front");
 app.use(express.static(publicPath));
 app.get("/", (req, res) => {
-    res.sendFile(path.join(publicPath, "index.html"));
+    res.json({ message: "Welcome to the Inventory Management System API!" });
 });
+
+export default serverless(app);
+export default app;
 
 const db = mongoose.connection;
 
