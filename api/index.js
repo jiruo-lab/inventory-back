@@ -1,8 +1,18 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import express from "express";
 import serverless from "serverless-http";
 import cors from "cors";
 import mongoose from "mongoose";
+
+/**
+ * Vercel Speed Insights is installed and configured.
+ * 
+ * Since this is an API backend serving JSON responses, Speed Insights
+ * will only become active if HTML pages are served in the future.
+ * 
+ * To use Speed Insights with HTML responses, see: api/speed-insights.js
+ * For more info: https://vercel.com/docs/speed-insights/quickstart
+ */
 
 const app = express();
 
